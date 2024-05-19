@@ -1,0 +1,1770 @@
+---
+title: "CM4 - GAN DIO Study"
+author: "CM"
+date: "2024-03-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(ggpattern)
+library(gghighlight)
+library(lubridate)
+library(readxl)
+library(ggpubr)
+library(ggforce)
+library(openxlsx)
+library(broom)
+library(rstatix)
+library(ggbreak)
+library(ggsignif)
+library(dplyr)
+library(tidyr)
+library(svglite)
+
+minimal_theme <- theme(
+  axis.line = element_line(color = "black", linewidth = .5),  # Set axis line color and thickness
+  axis.ticks = element_line(color = "black", linewidth = .5),  # Set tick mark color and thickness
+  axis.title = element_text(size = 12),  # Adjust axis title text size
+  axis.text = element_text(size = 10),  # Adjust axis label text size
+  axis.ticks.length = unit(0.1, "in"),  # Customize the length of the axis ticks (adjust the value as needed)
+  panel.background = element_blank(),  # Remove panel background
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  axis.ticks.x.top = element_blank(),
+  axis.text.x.top = element_blank(),
+  axis.line.x.top = element_blank(),
+  #panel.grid.major = element_line(color = "gray", size = 0.05),  # Customize major grid lines
+ # panel.grid.minor = element_line(color = "gray", size = 0.05),  # Customize minor grid lines
+  legend.background = element_rect(fill = "transparent"),  # Set legend background color
+  legend.title = element_text(size = 12),  # Adjust legend title text size
+  legend.text = element_text(size = 10),  # Adjust legend label text size
+  legend.key = element_rect(fill = "transparent"),  # Make the legend keys completely transparent
+ 
+)
+
+```
+
+```{r functions, include = FALSE}
+# Function to read and split the data
+read_and_split_data <- function(file_path) {
+  # Read the entire dataset
+  full_data <- read_excel(file_path)
+
+  # Splitting the data
+  measures <- full_data[, 1:12]
+  ids <- full_data[, 13:24]
+
+  return(list(measures = measures, ids = ids))
+}
+
+# Function to match measures with IDs
+match_data <- function(measures, ids) {
+  # Initialize an empty data frame for the matched data
+  matched_data <- data.frame(SampleID = character(), Absorbance = numeric(), stringsAsFactors = FALSE)
+
+  # Set column names for new row data frame
+  new_row_names <- names(matched_data)
+
+  # Iterate over each cell and match data
+  for (row in 1:nrow(measures)) {
+    for (col in 1:ncol(measures)) {
+      # Create a new row data frame
+      new_row <- data.frame(SampleID = as.character(ids[row, col]), Absorbance = as.numeric(measures[row, col]), stringsAsFactors = FALSE)
+      # Set the column names to match 'matched_data'
+      names(new_row) <- new_row_names
+
+      # Append the new row
+      matched_data <- rbind(matched_data, new_row)
+    }
+  }
+
+  return(matched_data)
+}
+
+
+### plasma
+# Function to read and split the data
+plasma_getdata <- function(file_path) {
+  # Read the entire dataset
+  full_data <- read_excel(file_path)
+
+  # Splitting the data
+  measures <- full_data[, 1:12]
+  ids <- full_data[, 13:24]
+  times <- full_data[, 25:36]
+  treatment <- full_data[, 37:48]
+
+  return(list(measures = measures, ids = ids, times = times, treatment = treatment))
+}
+
+# Function to match measures with IDs
+plasma_match_data <- function(measures, ids, times, treatment) {
+  # Initialize an empty data frame for the matched data
+  matched_data <- data.frame(SampleID = character(), Absorbance = numeric(), Time = numeric(), Treatment = character(), stringsAsFactors = FALSE)
+
+  # Set column names for new row data frame
+  new_row_names <- names(matched_data)
+
+  # Iterate over each cell and match data
+  for (row in 1:nrow(measures)) {
+    for (col in 1:ncol(measures)) {
+      # Create a new row data frame
+      new_row <- data.frame(SampleID = as.character(ids[row, col]), 
+                            Absorbance = as.numeric(measures[row, col]),
+                            Timepoint = as.numeric(times[row, col]), 
+                            Treatment = as.character(treatment[row, col]),
+                            stringsAsFactors = FALSE)
+      # Set the column names to match 'matched_data'
+      names(new_row) <- new_row_names
+
+      # Append the new row
+      matched_data <- rbind(matched_data, new_row)
+    }
+  }
+
+  return(matched_data)
+}
+
+
+### AST MATCHING
+# Function to read and split the data
+ast_getdata <- function(file_path) {
+  # Read the entire dataset
+  full_data <- read_excel(file_path)
+
+  # Splitting the data
+  measures <- full_data[, 1:12]
+  ids <- full_data[, 13:24]
+  times <- full_data[, 25:36]
+  treatment <- full_data[, 37:48]
+  week <- full_data[, 49:60]
+
+  return(list(measures = measures, ids = ids, times = times, treatment = treatment, week = week))
+}
+
+# Function to match measures with IDs
+ast_match_data <- function(measures, ids, times, treatment, week) {
+  # Initialize an empty data frame for the matched data
+  matched_data <- data.frame(SampleID = character(), Absorbance = numeric(), Time = numeric(), Treatment = character(), Week = numeric(), stringsAsFactors = FALSE)
+
+  # Set column names for new row data frame
+  new_row_names <- names(matched_data)
+
+  # Iterate over each cell and match data
+  for (row in 1:nrow(measures)) {
+    for (col in 1:ncol(measures)) {
+      # Create a new row data frame
+      new_row <- data.frame(SampleID = as.character(ids[row, col]), 
+                            Absorbance = as.numeric(measures[row, col]),
+                            Timepoint = as.numeric(times[row, col]), 
+                            Treatment = as.character(treatment[row, col]),
+                            Week = as.numeric(week[row, col]),
+                            stringsAsFactors = FALSE)
+      # Set the column names to match 'matched_data'
+      names(new_row) <- new_row_names
+
+      # Append the new row
+      matched_data <- rbind(matched_data, new_row)
+    }
+  }
+
+  return(matched_data)
+}
+
+# Normality
+normality_tests <- function(data, datacolumn) {
+  result <- data %>%
+    group_by(!!sym("Treatment")) %>%
+    summarize(shapiro_tests = list(shapiro.test(!!sym(datacolumn))))
+  
+  # Extract the p values from the list
+  p_values <- unlist(sapply(result$shapiro_tests, function(x) x$p.value))
+  
+  # Check if all p values are greater than 0.05
+  all_normal <- all(p_values > 0.05)
+  
+  # Select the appropriate statistical method based on normality
+  stat_method <- if (all_normal) "anova" else "kruskal.test"
+  
+  return(stat_method)
+}
+
+perform_anova <- function(data, group_col, value_col, parametric) {
+  if (parametric == "anova") {
+    # Parametric ANOVA
+    result <- aov(formula = as.formula(paste(value_col, "~", group_col)), data = data)
+    test_type <- "ANOVA"
+    next_test <- "t.test"
+    p_val <- summary(result)[[1]]$`Pr(>F)`[1]
+  } else if (parametric == "kruskal.test") {
+    # Non-parametric ANOVA (Kruskal-Wallis test)
+    result <- kruskal.test(as.formula(paste(value_col, "~", group_col)), data = data)
+    test_type <- "Kruskal-Wallis"
+    next_test <- "wilcox.test"
+    p_val <- result$p.value
+  }
+  
+  # Return the test result and test type
+  return(list(
+    result = result,
+    test_type = test_type,
+    next_test = next_test,
+    p_val = p_val
+  ))
+}
+
+# Enhanced pairwise testing function
+pairwise_testing <- function(data, response_var, group_var, correction_type, anova_or_kruskal) {
+  if (anova_or_kruskal$p_val < 0.05) {
+    
+    # Creating a response formula
+    response_formula <- as.formula(paste(response_var, "~", group_var))
+    
+    # Filter data for special case comparison: Chow-vehicle vs. Vehicle
+    special_data <- data %>% filter(.[[group_var]] %in% c("Chow-vehicle", "Vehicle"))
+
+    # General data excluding 'Chow-vehicle' for open pairwise comparisons
+    general_data <- data %>% filter(!.[[group_var]] %in% c("Chow-vehicle"))
+
+    # Function to perform pairwise tests without p-value adjustment
+    perform_tests <- function(data, test_type) {
+      if (test_type == "t.test") {
+        return(data %>% pairwise_t_test(response_formula, p.adjust.method = "none"))
+      } else if (test_type == "wilcox.test") {
+        return(data %>% pairwise_wilcox_test(response_formula, p.adjust.method = "none"))
+      }
+    }
+
+    # Perform pairwise comparisons for general and special groups
+    general_results <- perform_tests(general_data, anova_or_kruskal$next_test)
+    special_results <- perform_tests(special_data, anova_or_kruskal$next_test)
+
+    # Combine results from general and special case comparisons
+    combined_results <- bind_rows(general_results, special_results)
+
+    # Apply p-value correction to combined results
+    corrected_results <- combined_results %>%
+      adjust_pvalue(method = correction_type) %>%
+      add_significance()
+
+    return(corrected_results)
+  } else {
+    return("No significant overall effect; no pairwise tests performed.")
+  }
+}
+
+# Function to generate comparisons list from pairwise results
+generate_comparisons_list <- function(pairwise_results) {
+  if (!is.null(pairwise_results) && "group1" %in% names(pairwise_results)) {
+    comparisons_list <- lapply(1:nrow(pairwise_results), function(i) {
+      c(pairwise_results$group1[i], pairwise_results$group2[i])
+    })
+    return(comparisons_list)
+  } else {
+    return(NULL)
+  }
+}
+
+# Function to perform normality tests and ANOVA/Kruskal-Wallis test for each timepoint
+analyze_timepoints <- function(data, group_col, value_col, timecolumn, timepoints) {
+  results <- list()
+  
+  for (timepoint in timepoints) {
+    # Filter data for the current timepoint
+    filtered_data <- data %>% filter(timecolumn == timepoint)
+    
+    # Normality test
+    normality_result <- normality_tests(filtered_data, value_col)
+    
+    # Perform ANOVA or Kruskal-Wallis test
+    anova_result <- perform_anova(filtered_data, group_col, value_col, parametric = normality_result)
+    
+    # Store results
+    results[[timepoint]] <- anova_result
+  }
+  
+  return(results)
+}
+
+# Function to perform pairwise comparisons based on 'analyze_timepoints' output
+perform_pairwise_comparisons <- function(data, group_col, value_col, timepoints_results) {
+  pairwise_results_list <- list()
+
+  for (timepoint in names(timepoints_results)) {
+    result = timepoints_results[[timepoint]]
+    if (result$p_val < 0.05) {  # Check if the result is significant
+      filtered_data <- data %>% filter(Phase == timepoint)
+      
+      if (result$next_test == "t.test") {
+        pairwise_results <- pairwise_t_test(filtered_data, formula(paste(value_col, "~", group_col)), p.adjust.method = "bonferroni")
+      } else if (result$next_test == "wilcox.test") {  # Placeholder for other test types
+        pairwise_results <- pairwise_wilcox_test(filtered_data, formula(paste(value_col, "~", group_col)), p.adjust.method = "bonferroni")
+      }
+
+      # Store the results with the timepoint label for reference
+      pairwise_results_list[[timepoint]] <- pairwise_results
+    }
+  }
+
+  return(pairwise_results_list)
+}
+
+# Create a function to generate plot subtitles based on test results
+generate_subtitle <- function(test_results) {
+  subtitles <- c()
+  for (timepoint in names(test_results)) {
+    test_type <- test_results[[timepoint]]$test_type
+    p_val <- test_results[[timepoint]]$p_val
+    subtitle <- paste0(timepoint, ": ", test_type, ", p = ", round(p_val, 5))
+    subtitles <- c(subtitles, subtitle)
+  }
+  return(subtitles)
+}
+
+relevel <- function(data, group_var_name) {
+  # Ensure the group variable is a factor and set 'vehicle' as the first level
+  levels_order <- group_levels # adjust the other group names as needed
+  data[[group_var_name]] <- factor(data[[group_var_name]], levels = levels_order)
+  return(data)
+}
+```
+
+## Initial data processing
+```{r otherdata, echo=FALSE}
+# Dead mice have the following ID
+flags <- c("1084.1")
+flags2 <- c("1080.2") # food flag
+
+color_map <- c("Vehicle" = "#999999", "MK-8722" = "#B20237", "Semaglutide" = "#FFC162", "Survodutide" = "#918AE1", "Chow-vehicle" = "#E5E7EA", "JOP63" = "#13D6B0")
+group_levels <- c("Chow-vehicle", "Vehicle", "MK-8722", "JOP63", "Semaglutide", "Survodutide")
+
+CM_colors <- c("#999999", "#000000", "#E5E7EA",
+               "#13D6B0", "#045456", "#A6FBE3",
+               "#38C7E8", "#043E66", "#AFF2FB",
+               "#918AE1", "#463473", "#E3DEFF", 
+               "#FFC162", "#EC8200", "#FFEFC2", 
+               "#FC827F", "#B20237", "#FFE4E2")
+
+
+```
+
+```{r BG, echo=FALSE}
+# Define the path to your Excel file
+BG_file <- "/Users/christoffermerrild/OneDrive - University of Copenhagen/Speciale/CM4/CM4-BG.xlsx"
+
+# Read the Excel file into a data frame with column names
+BG_data <- read_excel(BG_file, col_names = TRUE)
+
+# Filter out rows with IDs in the 'flags' vector
+BG_data <- BG_data %>%
+  filter(!(ID %in% flags))
+
+# Extract the numeric part from the column names and convert to numeric
+BG_long <- BG_data %>%
+  pivot_longer(cols = starts_with("BG"), names_to = "Timepoint", values_to = "BG") %>%
+  mutate(Timepoint = case_when(
+    str_detect(Timepoint, "^BG_-") ~ as.numeric(str_replace(Timepoint, "BG_-(\\d+\\.?\\d*)", "-\\1")),
+    TRUE ~ as.numeric(str_replace(Timepoint, "BG_(\\d+\\.?\\d*)", "\\1"))
+  ))
+
+# Filter out rows with IDs in the 'flags' vector
+BG_long <- BG_long %>%
+  filter(!(ID %in% flags)) %>%
+  filter(!is.na(BG))
+
+# Calculate the means and standard errors for each combination of Timepoint and Treatment
+summary_BG <- BG_long %>%
+  group_by(Timepoint, Treatment) %>%
+  summarize(Mean = mean(BG, na.rm = TRUE),
+            SE = sd(BG, na.rm = TRUE) / sqrt(length(BG)), .groups = "drop")
+
+# plot 1
+BG_plot <- ggplot(relevel(summary_BG, "Treatment"), aes(x = Timepoint, y = Mean, color = Treatment, group = Treatment)) +
+  geom_line(na.rm = T, linewidth = 0.5) +
+  geom_point(size = 2, na.rm = T) +
+  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.2, linewidth = 0.3) +
+  scale_color_manual(values = color_map) +
+  scale_x_continuous(breaks = seq(0, 8, by = 1)) +
+  labs(
+    x = "Time (weeks)",
+    y = "Mean blood glucose (mmol/L)",
+    title = "Mean blood vs. Timepoint by Treatment"
+  ) + 
+  minimal_theme +
+  coord_cartesian(xlim = c(min(summary_BG$Timepoint), max(summary_BG$Timepoint)), ylim = c(0, max(summary_BG$Mean+2)))
+
+
+# Filter for last week to obtain final bg barplot
+
+# Adding outlier detection based on IQR
+final_BG_data <- BG_long %>%
+  filter(Timepoint == 8) %>%
+  group_by(Treatment) %>%
+  mutate(
+    IQR_value = IQR(BG),
+    Lower_Bound = quantile(BG, 0.25) - 1.5 * IQR_value,
+    Upper_Bound = quantile(BG, 0.75) + 1.5 * IQR_value,
+    Is_Outlier = BG > Upper_Bound | BG < Lower_Bound
+  ) %>%
+  ungroup()
+
+# Calculate the means and standard errors for each combination of Timepoint and Treatment
+summary_final_BG <- final_BG_data %>%
+  group_by(Treatment) %>%
+  summarize(Mean = mean(BG, na.rm = TRUE),
+            SE = sd(BG, na.rm = TRUE) / sqrt(length(BG)), .groups = "drop")
+
+# Normality
+normality_final_BG <- normality_tests(final_BG_data, "BG")
+
+# Parametric ANOVA / Non-parametric ANOVA
+parametric_final_BG <- perform_anova(final_BG_data, "Treatment", "BG", parametric = normality_final_BG)
+
+# Making pairwise tests if results from parametric / non-parametric ANOVA is significant
+pairwise_final_BG <- pairwise_testing(final_BG_data, "BG", "Treatment", "bonferroni", parametric_final_BG)
+
+# Calling the comparisons for plotting
+comparisons_final_BG <- generate_comparisons_list(pairwise_final_BG)
+
+# Final BG barplot
+final_BG_barplot <- ggplot(data = relevel(final_BG_data, "Treatment"), aes(x = Treatment, y = BG, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(summary_final_BG, "Treatment"), mapping = aes(x = Treatment, y = Mean, fill = Treatment),
+           col = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(data = filter(final_BG_data, Is_Outlier == FALSE),
+              aes(x = Treatment, y = BG),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(final_BG_data, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = BG), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(summary_final_BG, "Treatment"), mapping = aes(x = Treatment, ymin = Mean - SE, ymax = Mean + SE), 
+                col = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2) +  
+  labs(y = "Blood glucose (mmol/L)",
+       title = "Final blood glucose vs. Treatment (day 14)",
+       subtitle = paste0(parametric_final_BG$test_type, ", p = ", round(parametric_final_BG$p_val, 5))) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  coord_cartesian(ylim = c(0, 20)) +
+  minimal_theme +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))
+# Check if the p-value is below 0.05
+if (round(parametric_final_BG$p_val, 5) < 0.05) {
+  final_BG_barplot <- final_BG_barplot + 
+  geom_signif(comparisons = comparisons_final_BG,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.1,
+              annotations = paste0(pairwise_final_BG$p.adj.signif))
+} 
+
+# Calculate the change in BG from Timepoint 0 to Timepoint 8
+BG_change <- BG_long %>%
+  group_by(ID, Treatment) %>%
+  summarize(
+    BG_Start = BG[Timepoint == 0],
+    BG_End = BG[Timepoint == 8],
+    BG_Change = BG_End - BG_Start,
+    .groups = "drop"
+  )
+
+# Adding outlier detection based on IQR for BG_Change
+BG_change <- BG_change %>%
+  filter(!is.na(BG_Change)) %>%
+  group_by(Treatment) %>%
+  mutate(
+    IQR_value = IQR(BG_Change),
+    Lower_Bound = quantile(BG_Change, 0.25) - 1.5 * IQR_value,
+    Upper_Bound = quantile(BG_Change, 0.75) + 1.5 * IQR_value,
+    Is_Outlier = BG_Change > Upper_Bound | BG_Change < Lower_Bound
+  ) %>%
+  ungroup()
+
+# Calculate the means and standard errors for BG_Change
+summary_BG_change <- BG_change_filtered %>%
+  group_by(Treatment) %>%
+  summarize(
+    Mean = mean(BG_Change, na.rm = TRUE),
+    SE = sd(BG_Change, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Normality
+normality_change_BG <- normality_tests(BG_change, "BG_Change")
+
+# Parametric ANOVA / Non-parametric ANOVA
+parametric_change_BG <- perform_anova(BG_change, "Treatment", "BG_Change", parametric = normality_change_BG)
+
+# Making pairwise tests if results from parametric / non-parametric ANOVA is significant
+pairwise_change_BG <- pairwise_testing(BG_change, "BG_Change", "Treatment", "bonferroni", parametric_change_BG)
+
+# Calling the comparisons for plotting
+comparisons_change_BG <- generate_comparisons_list(pairwise_change_BG)
+
+
+# Final BG barplot
+change_BG_barplot <- ggplot(data = relevel(BG_change, "Treatment"), aes(x = Treatment, y = BG_Change, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(summary_BG_change, "Treatment"), mapping = aes(x = Treatment, y = Mean, fill = Treatment),
+           col = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(data = filter(BG_change, Is_Outlier == FALSE),
+              aes(x = Treatment, y = BG_Change),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(BG_change, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = BG_Change), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(summary_BG_change, "Treatment"), mapping = aes(x = Treatment, ymin = Mean - SE, ymax = Mean + SE), 
+                col = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2) +
+  geom_hline(yintercept = 0) +
+  labs(y = "∆Blood glucose (mmol/L)",
+       title = "Change in blood glucose vs. Treatment (day 14)",
+       subtitle = paste0(parametric_change_BG$test_type, ", p = ", round(parametric_change_BG$p_val, 5))) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  scale_y_continuous(expand = expansion(mult = 0)) +
+  coord_cartesian(ylim = c(-5, 5)) +
+  minimal_theme +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))
+# Check if the p-value is below 0.05
+if (round(parametric_change_BG$p_val, 5) < 0.05) {
+  change_BG_barplot <- change_BG_barplot + 
+  geom_signif(comparisons = comparisons_change_BG,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.06,
+              annotations = paste0(pairwise_change_BG$p.adj.signif))
+}
+
+change_BG_barplot
+```
+
+```{r BM, echo=FALSE}
+# Define the path to your Excel file
+BM_file <- "/Users/christoffermerrild/OneDrive - University of Copenhagen/Speciale/CM4/CM4-BM1.xlsx"
+
+# Read the Excel file into a data frame with column names
+BM_data <- read_excel(BM_file, col_names = TRUE)
+
+# Filter out rows with IDs in the 'flags' vector
+BM_data <- BM_data %>%
+  filter(!(ID %in% flags))
+
+# Extract the numeric part from the column names and convert to numeric
+BM_long <- BM_data %>%
+  pivot_longer(cols = starts_with("BM"), names_to = "Timepoint", values_to = "BM") %>%
+  mutate(Timepoint = case_when(
+    str_detect(Timepoint, "^BM_-") ~ as.numeric(str_replace(Timepoint, "BM_-(\\d+\\.?\\d*)", "-\\1")),
+    TRUE ~ as.numeric(str_replace(Timepoint, "BM_(\\d+\\.?\\d*)", "\\1"))
+  ))
+
+# Filter out rows with IDs in the 'flags' vector
+BM_long <- BM_long %>%
+  filter(!(ID %in% flags)) %>%
+  filter(!is.na(BM))
+
+# Calculate the means and standard errors for each combination of Timepoint and Treatment
+summary_BM <- BM_long %>%
+  group_by(Timepoint, Treatment) %>%
+  summarize(Mean = mean(BM, na.rm = TRUE),
+            SE = sd(BM, na.rm = TRUE) / sqrt(length(BM)), .groups = "drop")
+
+# Calculate the delta values for BM for each mouse (ID) within each combination of Timepoint, Treatment, and ID
+delta_BM <- BM_long %>%
+  group_by(ID) %>%
+  arrange(Timepoint) %>%
+  mutate(Delta_BM = (BM - first(BM[Timepoint == 0]))/first(BM[Timepoint == 0])*100) %>%
+  filter(!is.na(Delta_BM))
+
+# Calculate the mean and standard error for the delta BM within each combination of Timepoint, Treatment, and ID
+summary_delta_BM <- delta_BM %>%
+  group_by(Timepoint, Treatment) %>%
+  summarize(Mean = mean(Delta_BM, na.rm = TRUE),
+            SE = sd(Delta_BM, na.rm = TRUE) / sqrt(length(Delta_BM)),
+            .groups = "drop")
+
+# delta total BM
+delta_total_BM <- delta_BM %>%
+  filter(Timepoint == max(Timepoint))
+summary_delta_total_BM <- summary_delta_BM %>%
+  filter(Timepoint == max(Timepoint))
+
+# Outliers
+delta_total_BM <- delta_total_BM %>%
+  group_by(Treatment) %>%
+  mutate(
+    IQR_value = IQR(Delta_BM),
+    Lower_Bound = quantile(Delta_BM, 0.25) - 1.5 * IQR_value,
+    Upper_Bound = quantile(Delta_BM, 0.75) + 1.5 * IQR_value,
+    Is_Outlier = Delta_BM > Upper_Bound | Delta_BM < Lower_Bound
+  ) %>%
+  ungroup()
+
+# Calculate total weight loss for each animal
+BM_total_weight_loss <- BM_long %>%
+  group_by(ID) %>% 
+  filter(!is.na(BM)) %>%
+  arrange(Timepoint) %>%
+  summarize(Loss = first(BM[Timepoint == max(Timepoint)]) - first(BM[Timepoint == 0]), .groups = "drop")
+
+# Merge the total weight loss data with the Treatment information
+BM_total_loss_treatment <- BM_data %>%
+  dplyr::select(ID, Treatment) %>%
+  inner_join(BM_total_weight_loss, by = "ID")
+
+# Outliers
+BM_total_loss_treatment <- BM_total_loss_treatment %>%
+  group_by(Treatment) %>%
+  mutate(
+    IQR_value = IQR(Loss),
+    Lower_Bound = quantile(Loss, 0.25) - 1.5 * IQR_value,
+    Upper_Bound = quantile(Loss, 0.75) + 1.5 * IQR_value,
+    Is_Outlier = Loss > Upper_Bound | Loss < Lower_Bound
+  ) %>%
+  ungroup()
+
+# Calculate mean and SEM of weight loss per treatment
+summary_weight_loss_treatment <- BM_total_loss_treatment %>%
+  group_by(Treatment) %>%
+  summarize(Mean = mean(Loss, na.rm = TRUE),
+            SE = sd(Loss, na.rm = TRUE) / sqrt(n()), .groups = "drop")
+
+# Normality
+normality_total_BM <- normality_tests(BM_total_loss_treatment, "Loss")
+normality_delta_total_BM <- normality_tests(delta_total_BM, "Delta_BM")
+
+# Parametric ANOVA / Non-parametric ANOVA
+parametric_total_BM <- perform_anova(BM_total_loss_treatment, "Treatment", "Loss", parametric = normality_total_BM)
+parametric_delta_total_BM <- perform_anova(delta_total_BM, "Treatment", "Delta_BM", parametric = normality_delta_total_BM)
+
+# Making pairwise tests if results from parametric / non-parametric ANOVA is significant
+pairwise_total_BM <- pairwise_testing(BM_total_loss_treatment, "Loss", "Treatment", "bonferroni", parametric_total_BM)
+pairwise_delta_total_BM <- pairwise_testing(delta_total_BM, "Delta_BM", "Treatment", "bonferroni", parametric_delta_total_BM)
+
+# Calling the comparisons for plotting
+comparisons_total_BM <- generate_comparisons_list(pairwise_total_BM)
+comparisons_delta_total_BM <- generate_comparisons_list(pairwise_delta_total_BM)
+
+"### THIS IS THE ABSOLUTE BODYWEIGHT ###"
+# Create a ggplot scatter plot of the averages with error bars
+BM_plot <- ggplot(relevel(summary_BM, "Treatment"), aes(x = Timepoint, y = Mean, color = Treatment, group = Treatment)) +
+  geom_line(na.rm = T, linewidth = 0.5) +
+  geom_point(size = 2, na.rm = T) +
+  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.2, linewidth = 0.3) +
+  scale_color_manual(values = color_map) +  
+  geom_vline(xintercept = 0, linetype = "dotted", col = "darkgrey") +
+  geom_vline(xintercept = 30, linetype = "dotted", col = "grey") +
+  geom_vline(xintercept = -5, linetype = "dotted", col = "grey") +
+  scale_x_continuous(breaks = seq(-6, 57, by = 3)) +
+  labs(
+    x = "Time (days)",
+    y = "Mean weight (g)",
+    title = "Mean weight vs. Timepoint by Treatment"
+  ) + 
+  minimal_theme +
+  coord_cartesian(xlim = c(0, max(summary_BM$Timepoint)), ylim = c(25, 50))
+
+"### THIS IS THE DELTA BODYWEIGHT ###"
+# Create a ggplot scatter plot of the averages with error bars
+BM_delta_plot <- ggplot(relevel(summary_delta_BM, "Treatment"), aes(x = Timepoint, y = Mean, color = Treatment, group = Treatment)) +
+  geom_line(na.rm = T, linewidth = 0.5) +
+  geom_point(size = 2, na.rm = T) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_vline(xintercept = 0, linetype = "dotted", col = "darkgrey") +
+  geom_vline(xintercept = 30, linetype = "dotted", col = "grey") +
+  geom_vline(xintercept = -5, linetype = "dotted", col = "grey") +
+  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.2, linewidth = 0.3) +
+  scale_color_manual(values = color_map) + 
+  scale_x_continuous(breaks = seq(-6, 57, by = 3)) +
+  labs(
+    x = "Time (days)",
+    y = "∆Mean weight (%)",
+    title = "Mean weight vs. Timepoint by Treatment"
+  ) + 
+  minimal_theme
+
+# Barplot of total food intake
+BM_total_barplot <- ggplot(data = relevel(BM_total_loss_treatment, "Treatment"), aes(x = Treatment, y = Loss, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(summary_weight_loss_treatment, "Treatment"), aes(x = Treatment, y = Mean, fill = Treatment),
+           color = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(data = filter(BM_total_loss_treatment, Is_Outlier == FALSE),
+              aes(x = Treatment, y = Loss),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(BM_total_loss_treatment, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = Loss), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(summary_weight_loss_treatment, "Treatment"), 
+                aes(x = Treatment, ymin = Mean - SE, ymax = Mean + SE), 
+                color = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2) +
+  geom_hline(yintercept = 0) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  labs(y = "Body weight change (g)",
+       title = "Total body weight change vs. Treatment",
+       subtitle = paste0(parametric_total_BM$test_type, ", p = ", round(parametric_total_BM$p_val, 5))) +
+  coord_cartesian(ylim = c(min(BM_total_loss_treatment$Loss)*1.1, 20)) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  minimal_theme +
+  theme(axis.text.x = element_blank(),  # Corrected to show X axis text
+        axis.title.x = element_blank(),  # Corrected to show X axis title
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))  # Corrected to show X axis ticks
+
+# Check if the p-value is below 0.05
+if (round(parametric_delta_total_BM$p_val, 5) < 0.05) {
+  BM_total_barplot <- BM_total_barplot + 
+  geom_signif(comparisons = comparisons_total_BM,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.07,
+              annotations = paste0(pairwise_total_BM$p.adj.signif))
+} 
+
+# Barplot of total food intake
+BM_delta_total_barplot <- ggplot(data = relevel(delta_total_BM, "Treatment"), aes(x = Treatment, y = Delta_BM, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(summary_delta_total_BM, "Treatment"), aes(x = Treatment, y = Mean, fill = Treatment),
+           color = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_errorbar(inherit.aes = FALSE, data = relevel(summary_delta_total_BM, "Treatment"), 
+                aes(x = Treatment, ymin = Mean - SE, ymax = Mean + SE), 
+                color = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2) +
+  geom_jitter(data = filter(delta_total_BM, Is_Outlier == FALSE),
+              aes(x = Treatment, y = Delta_BM),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(delta_total_BM, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = Delta_BM), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_hline(yintercept = 0) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  labs(y = "∆Body weight change (%)",
+       title = "Total weight loss vs. Treatment",
+       subtitle = paste0(parametric_delta_total_BM$test_type, ", p = ", round(parametric_delta_total_BM$p_val, 5))) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  coord_cartesian(ylim = c(-30, 35)) +
+  minimal_theme +
+  theme(axis.text.x = element_blank(),  # Corrected to show X axis text
+        axis.title.x = element_blank(),  # Corrected to show X axis title
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))  # Corrected to show X axis ticks
+
+# Check if the p-value is below 0.05
+if (round(parametric_delta_total_BM$p_val, 5) < 0.05) {
+  BM_delta_total_barplot <- BM_delta_total_barplot + 
+  geom_signif(comparisons = comparisons_delta_total_BM,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.05,
+              annotations = paste0(pairwise_delta_total_BM$p.adj.signif))
+  
+}
+
+
+BM_delta_total_barplot
+BM_delta_plot
+```
+
+```{r FI, echo=FALSE}
+kcal_chow <- 3.339
+kcal_gan <- 4.46
+
+# Define the path to your Excel file
+FI_file <- "/Users/christoffermerrild/OneDrive - University of Copenhagen/Speciale/CM4/CM4-FI1.xlsx"
+
+# Read the Excel file into a data frame with column names
+FI_data <- read_excel(FI_file, col_names = TRUE)
+
+# Filter out rows with IDs in the 'flags' vector
+FI_data <- FI_data %>%
+  filter(!(ID %in% flags)) %>%
+  filter(!(ID %in% flags2))
+
+# Extract the numeric part from the column names and convert to numeric
+FI_long <- FI_data %>%
+  pivot_longer(cols = starts_with("Intake_"), names_to = "Timepoint", values_to = "FI") %>%
+  mutate(
+    Timepoint = as.numeric(sub("Intake_(\\d+\\.?\\d*)", "\\1", Timepoint)),
+    FI = if_else(Diet == "Chow", FI * kcal_chow, FI * kcal_gan)
+  ) %>%
+  filter(!is.na(FI))
+
+# Calculate the means and standard errors for each combination of Timepoint and Treatment
+summary_FI <- FI_long %>%
+  group_by(Treatment, Timepoint) %>%
+  summarize(Mean = mean(FI, na.rm = TRUE),
+            SE = sd(FI, na.rm = TRUE) / sqrt(length(FI)), .groups = "drop")
+
+# Calculate the total food intake per ID and group it by Treatment
+total_FI <- FI_long %>%
+  group_by(ID, Treatment) %>%
+  summarize(Total_FI = sum(FI, na.rm = TRUE), .groups = "drop")
+
+# Calculate accumulative food intake per ID and Timepoint
+FI_cumulative <- FI_long %>%
+  group_by(ID, Treatment) %>%
+  arrange(ID, Treatment, Timepoint) %>%
+  mutate(Accumulative_FI = cumsum(FI)) %>%
+  ungroup()
+
+# Calculate the means and standard errors for each combination of Timepoint and Treatment
+summary_FI_cumulative <- FI_cumulative %>%
+  group_by(Treatment, Timepoint) %>%
+  summarize(Mean = mean(Accumulative_FI, na.rm = TRUE),
+            SE = sd(Accumulative_FI, na.rm = TRUE) / sqrt(length(Accumulative_FI)), .groups = "drop")
+
+# Outliers
+total_FI <- total_FI %>%
+  group_by(Treatment) %>%
+  mutate(
+    IQR_value = IQR(Total_FI),
+    Lower_Bound = quantile(Total_FI, 0.25) - 1.5 * IQR_value,
+    Upper_Bound = quantile(Total_FI, 0.75) + 1.5 * IQR_value,
+    Is_Outlier = Total_FI > Upper_Bound | Total_FI < Lower_Bound
+  ) %>%
+  ungroup()
+
+# Average total food intake and the SEM
+summary_total_FI <- total_FI %>%
+  group_by(Treatment) %>%
+  summarize(Mean = mean(Total_FI, na.rm = TRUE),
+            SE = sd(Total_FI, na.rm = TRUE) / sqrt(length(Total_FI)), .groups = "drop")
+
+# Normality
+normality_total_FI <- normality_tests(total_FI, "Total_FI")
+
+# Parametric ANOVA / Non-parametric ANOVA
+parametric_total_FI <- perform_anova(total_FI, "Treatment", "Total_FI", parametric = normality_total_FI)
+
+# Making pairwise tests if results from parametric / non-parametric ANOVA is significant
+pairwise_total_FI <- pairwise_testing(total_FI, "Total_FI", "Treatment", "bonferroni", parametric_total_FI)
+
+# Calling the comparisons for plotting
+comparisons_total_FI <- generate_comparisons_list(pairwise_total_FI)
+
+"### THIS IS THE FOOD INTAKE ###"
+# Create a ggplot scatter plot of the averages with error bars
+FI_plot <- ggplot(relevel(summary_FI, "Treatment"), aes(x = Timepoint, y = Mean, color = Treatment, group = Treatment)) +
+  geom_line(na.rm = T, linewidth = 0.5) +
+  geom_point(size = 2, na.rm = T) +
+  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.2, linewidth = 0.3) +
+  scale_color_manual(values = color_map) +
+  scale_x_continuous(breaks = seq(0, 57, by = 3)) +
+  labs(
+    x = "Time (days)",
+    y = "Food intake (kcal)",
+    title = "Food intake vs. Timepoint by Treatment"
+  ) + 
+  minimal_theme +
+  coord_cartesian(xlim = c(0, max(summary_FI$Timepoint)), ylim = c(0, max(summary_FI$Mean) + 1))
+
+"### THIS IS THE FOOD INTAKE ###"
+# Create a ggplot line plot of the accumulative food intake with error bars
+FI_cumulative_plot <- ggplot(summary_FI_cumulative, aes(x = Timepoint, y = Mean, color = Treatment, group = Treatment)) +
+  geom_line(na.rm = TRUE, size = 1) +
+  geom_point(size = 2, na.rm = TRUE) +
+  geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.2, linewidth = 0.3) +
+  scale_color_manual(values = color_map) +
+  scale_x_continuous(breaks = seq(0, 57, by = 3)) +
+  labs(
+    x = "Time (days)",
+    y = "Cumulative food intake (kcal)",
+    title = "Cumulative food intake vs. Timepoint by Treatment"
+  ) +
+  minimal_theme
+
+
+# Barplot of total food intake
+FI_total_barplot <- ggplot(data = relevel(total_FI, "Treatment"), aes(x = Treatment, y = Total_FI, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(summary_total_FI, "Treatment"), mapping = aes(x = Treatment, y = Mean, fill = Treatment),
+           col = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(data = filter(total_FI, Is_Outlier == FALSE),
+              aes(x = Treatment, y = Total_FI),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(total_FI, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = Total_FI), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, 
+                data = relevel(summary_total_FI, "Treatment"), 
+                mapping = aes(x = Treatment, ymin = Mean - SE, ymax = Mean + SE), 
+                col = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2) +
+  labs(y = "Total food intake (kcal)",
+       title = "Total food intake vs. Treatment",
+       subtitle = paste0(parametric_total_FI$test_type, ", p = ", round(parametric_total_FI$p_val, 5))) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  minimal_theme +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))
+
+# Check if the p-value is below 0.05
+if (round(parametric_total_FI$p_val, 5) < 0.05) {
+  FI_total_barplot <- FI_total_barplot + 
+  geom_signif(comparisons = comparisons_total_FI,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.1,
+              annotations = paste0(pairwise_total_FI$p.adj.signif))
+} 
+
+
+
+
+```
+
+```{r MRI, echo=FALSE}
+# Define the path to your Excel file
+MRI_file <- "/Users/christoffermerrild/OneDrive - University of Copenhagen/Speciale/CM4/CM4+5_MRI-data.xlsx"
+
+# Read the Excel file into a data frame with column names
+MRI_data <- read_excel(MRI_file, col_names = TRUE)
+
+# Upload genotype and sex list of animals by ID
+SampleIDs <- read_excel("CM4_sampleIDs.xlsx") %>% 
+  mutate(SampleID = as.character(SampleID))
+
+# Combine chol and info data
+MRI_data <- left_join(MRI_data, SampleIDs, by = "Pyrat_ID")
+
+# Filter out rows with IDs in the 'flags' vector
+MRI_data <- MRI_data %>%
+  filter(!(ID %in% flags)) %>%
+  filter(!is.na(ID))
+
+# Factor levels
+MRI_data$Timepoint <- factor(MRI_data$Timepoint, levels = c("Pre", "Mid"))
+
+# Extract the numeric part from the column names and convert to numeric
+MRI_long <- MRI_data %>%
+  pivot_longer(cols = ends_with("mass"), names_to = "Type", values_to = "Mass")
+
+# Calculate % of fat mass and lean mass
+MRI_long <- MRI_long %>%
+  group_by(ID, Timepoint) %>%
+  mutate(Percent = Mass/BW*100) %>%
+  ungroup()
+
+# Delta type of mass calculations
+MRI_delta <- MRI_long %>%
+  group_by(ID, Type, Treatment) %>%
+  summarise(Pre = Mass[Timepoint == "Pre"], Mid = Mass[Timepoint == "Mid"]) %>%
+  ungroup() 
+
+# Calculate the delta based on Mass values
+MRI_delta <- MRI_delta %>%
+  mutate(delta = (Mid - Pre) / Pre * 100) %>%
+  mutate(delta2 = Mid - Pre)
+
+# Outliers
+MRI_delta <- MRI_delta %>%
+  group_by(Treatment, Type) %>%
+  mutate(
+    IQR_value = IQR(delta),
+    Lower_Bound = quantile(delta, 0.25) - 1.5 * IQR_value,
+    Upper_Bound = quantile(delta, 0.75) + 1.5 * IQR_value,
+    Is_Outlier = delta > Upper_Bound | delta < Lower_Bound
+  ) %>%
+  ungroup()
+
+# Calculate the mean and standard error
+summary_MRI <- MRI_long %>%
+  group_by(Timepoint, Treatment, Type) %>%
+  summarize(Mean = mean(Percent, na.rm = TRUE),
+            SE = sd(Percent, na.rm = TRUE) / sqrt(length(Percent)),
+            .groups = "drop")
+
+# Calculate the mean and standard error
+summary_MRI_delta <- MRI_delta %>%
+  group_by(Treatment, Type) %>%
+  summarize(Mean = mean(delta, na.rm = TRUE),
+            SE = sd(delta, na.rm = TRUE) / sqrt(length(delta)),
+            Mean2 = mean(delta2, na.rm = TRUE),
+            SE2 = sd(delta2, na.rm = TRUE) / sqrt(length(delta2)),
+            .groups = "drop")
+
+# Filters
+MRI_fat <- MRI_long %>% filter(Type == "Fat_mass")
+MRI_fat_summary <- summary_MRI %>% filter(Type == "Fat_mass")
+MRI_fat_delta <- MRI_delta %>% filter(Type == "Fat_mass")
+MRI_fat_delta_summary <- summary_MRI_delta %>% filter(Type == "Fat_mass")
+
+MRI_lean <- MRI_long %>% filter(Type == "Lean_mass")
+MRI_lean_summary <- summary_MRI %>% filter(Type == "Lean_mass")
+MRI_lean_delta <- MRI_delta %>% filter(Type == "Lean_mass")
+MRI_lean_delta_summary <- summary_MRI_delta %>% filter(Type == "Lean_mass")
+
+MRI_fluid <- MRI_long %>% filter(Type == "Fluid_mass")
+MRI_fluid_summary <- summary_MRI %>% filter(Type == "Fluid_mass")
+MRI_fluid_delta <- MRI_delta %>% filter(Type == "Fluid_mass")
+MRI_fluid_delta_summary <- summary_MRI_delta %>% filter(Type == "Fluid_mass")
+
+# Relevel
+MRI_fat$Timepoint <- factor(MRI_fat$Timepoint, levels = c("Pre", "Mid"))
+MRI_fat_summary$Timepoint <- factor(MRI_fat_summary$Timepoint, levels = c("Pre", "Mid"))
+
+MRI_lean$Timepoint <- factor(MRI_lean$Timepoint, levels = c("Pre", "Mid"))
+MRI_lean_summary$Timepoint <- factor(MRI_lean_summary$Timepoint, levels = c("Pre", "Mid"))
+
+MRI_fluid$Timepoint <- factor(MRI_fluid$Timepoint, levels = c("Pre", "Mid"))
+MRI_fluid_summary$Timepoint <- factor(MRI_fluid_summary$Timepoint, levels = c("Pre", "Mid"))
+
+# Normality
+normality_MRI_fat <- normality_tests(MRI_fat_delta, "delta")
+normality_MRI_lean <- normality_tests(MRI_lean_delta, "delta")
+
+normality_MRI_fat2 <- normality_tests(MRI_fat_delta, "delta2")
+normality_MRI_lean2 <- normality_tests(MRI_lean_delta, "delta2")
+
+# Parametric ANOVA / Non-parametric ANOVA
+parametric_MRI_fat <- perform_anova(MRI_fat_delta, "Treatment", "delta", parametric = normality_MRI_fat)
+parametric_MRI_lean <- perform_anova(MRI_lean_delta, "Treatment", "delta", parametric = normality_MRI_lean)
+
+parametric_MRI_fat2 <- perform_anova(MRI_fat_delta, "Treatment", "delta2", parametric = normality_MRI_fat)
+parametric_MRI_lean2 <- perform_anova(MRI_lean_delta, "Treatment", "delta2", parametric = normality_MRI_lean)
+
+# Making pairwise tests if results from parametric / non-parametric ANOVA is significant
+pairwise_MRI_fat <- pairwise_testing(MRI_fat_delta, "delta", "Treatment", "bonferroni", parametric_MRI_fat)
+pairwise_MRI_lean <- pairwise_testing(MRI_lean_delta, "delta", "Treatment", "bonferroni", parametric_MRI_lean)
+
+pairwise_MRI_fat2 <- pairwise_testing(MRI_fat_delta, "delta2", "Treatment", "bonferroni", parametric_MRI_fat2)
+pairwise_MRI_lean2 <- pairwise_testing(MRI_lean_delta, "delta2", "Treatment", "bonferroni", parametric_MRI_lean2)
+
+# Calling the comparisons for plotting
+comparisons_MRI_fat <- generate_comparisons_list(pairwise_MRI_fat)
+comparisons_MRI_lean <- generate_comparisons_list(pairwise_MRI_lean)
+
+comparisons_MRI_fat2 <- generate_comparisons_list(pairwise_MRI_fat2)
+comparisons_MRI_lean2 <- generate_comparisons_list(pairwise_MRI_lean2)
+
+# Barplot of MRI
+MRI_fat_barplot <- ggplot(data = relevel(MRI_fat, "Treatment"), aes(x = Timepoint, y = Percent, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(MRI_fat_summary, "Treatment"), aes(x = Timepoint, y = Mean, fill = Treatment),
+           color = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(MRI_fat_summary, "Treatment"), 
+                aes(x = Timepoint, ymin = Mean - SE, ymax = Mean + SE), 
+                color = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2,
+                stat = "identity") +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  labs(y = "% Fat mass",
+       title = "MRI: Fat mass before and after treatments") +
+  coord_cartesian(ylim = c(0, 50)) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  minimal_theme +
+  theme(plot.subtitle = element_text(size = 8),
+        strip.text = element_blank()) +
+  facet_wrap(~Treatment, nrow = 1)
+
+# Delta fat bar plot (% change)
+MRI_delta_fat_barplot <- ggplot(data = relevel(MRI_fat_delta, "Treatment"), aes(x = Treatment, y = delta, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(MRI_fat_delta_summary, "Treatment"), aes(x = Treatment, y = Mean, fill = Treatment),
+           color = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(data = filter(MRI_fat_delta, Is_Outlier == FALSE),
+              aes(x = Treatment, y = delta),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(MRI_fat_delta, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = delta), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(MRI_fat_delta_summary, "Treatment"), 
+                aes(x = Treatment, ymin = Mean - SE, ymax = Mean + SE), 
+                color = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2,
+                stat = "identity") +
+  geom_hline(yintercept = 0) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  labs(y = "% change in fat mass",
+       title = "MRI: Fat mass before and after treatments",
+       subtitle = paste0(parametric_MRI_fat$test_type, ", p = ", round(parametric_MRI_fat$p_val, 5))) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  coord_cartesian(ylim = c(-65, 100)) +
+  minimal_theme +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))
+
+# Check if the p-value is below 0.05
+if (round(parametric_MRI_fat$p_val, 5) < 0.05) {
+  MRI_delta_fat_barplot <- MRI_delta_fat_barplot + 
+  geom_signif(comparisons = comparisons_MRI_fat,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.05,
+              annotations = paste0(pairwise_MRI_fat$p.adj.signif))
+} 
+
+
+# Absolute change 
+MRI_delta_fat_barplot2 <- ggplot(data = relevel(MRI_fat_delta, "Treatment"), aes(x = Treatment, y = delta2, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(MRI_fat_delta_summary, "Treatment"), aes(x = Treatment, y = Mean2, fill = Treatment),
+           color = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(data = filter(MRI_fat_delta, Is_Outlier == FALSE),
+              aes(x = Treatment, y = delta2),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(MRI_fat_delta, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = delta2), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(MRI_fat_delta_summary, "Treatment"), 
+                aes(x = Treatment, ymin = Mean2 - SE2, ymax = Mean2 + SE2), 
+                color = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2,
+                stat = "identity") +
+  geom_hline(yintercept = 0) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  labs(y = "change in fat mass, start - end (grams)",
+       title = "MRI: Fat mass change after treatments", 
+       subtitle = paste0(parametric_MRI_fat2$test_type, ", p = ", round(parametric_MRI_fat2$p_val, 5))) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  coord_cartesian(ylim = c(-15, 10)) +
+  minimal_theme +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))
+
+# Check if the p-value is below 0.05
+if (round(parametric_MRI_fat2$p_val, 5) < 0.05) {
+  MRI_delta_fat_barplot2 <- MRI_delta_fat_barplot2 + 
+  geom_signif(comparisons = comparisons_MRI_fat2,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.05,
+              annotations = paste0(pairwise_MRI_fat2$p.adj.signif))
+} 
+
+# Barplot of MRI
+MRI_lean_barplot <- ggplot(data = relevel(MRI_lean, "Treatment"), aes(x = Timepoint, y = Percent, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(MRI_lean_summary, "Treatment"), aes(x = Timepoint, y = Mean, fill = Treatment),
+           color = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(MRI_lean_summary, "Treatment"), 
+                aes(x = Timepoint, ymin = Mean - SE, ymax = Mean + SE), 
+                color = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2,
+                stat = "identity") +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  labs(y = "% lean mass",
+       title = "MRI: lean mass before and after treatments") +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  coord_cartesian(ylim = c(30, 80)) +
+  minimal_theme +
+  theme(plot.subtitle = element_text(size = 8),
+        strip.text = element_blank()) +
+  facet_wrap(~Treatment, nrow = 1)
+
+
+# Delta fat bar plot (% change)
+MRI_delta_lean_barplot <- ggplot(data = relevel(MRI_lean_delta, "Treatment"), aes(x = Treatment, y = delta, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(MRI_lean_delta_summary, "Treatment"), aes(x = Treatment, y = Mean, fill = Treatment),
+           color = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(data = filter(MRI_lean_delta, Is_Outlier == FALSE),
+              aes(x = Treatment, y = delta),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(MRI_lean_delta, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = delta), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(MRI_lean_delta_summary, "Treatment"), 
+                aes(x = Treatment, ymin = Mean - SE, ymax = Mean + SE), 
+                color = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2,
+                stat = "identity") +
+  geom_hline(yintercept = 0) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  labs(y = "% change in lean mass",
+       title = "MRI: lean mass before and after treatments",
+       subtitle = paste0(parametric_MRI_lean$test_type, ", p = ", round(parametric_MRI_lean$p_val, 5))) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  coord_cartesian(ylim = c(-15, 30)) +
+  minimal_theme +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))
+
+# Check if the p-value is below 0.05
+if (round(parametric_MRI_lean$p_val, 5) < 0.05) {
+  MRI_delta_lean_barplot <- MRI_delta_lean_barplot + 
+  geom_signif(comparisons = comparisons_MRI_lean,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.05,
+              annotations = paste0(pairwise_MRI_lean$p.adj.signif))
+} 
+
+
+# Absolute change 
+MRI_delta_lean_barplot2 <- ggplot(data = relevel(MRI_lean_delta, "Treatment"), aes(x = Treatment, y = delta2, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(MRI_lean_delta_summary, "Treatment"), aes(x = Treatment, y = Mean2, fill = Treatment),
+           color = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(data = filter(MRI_lean_delta, Is_Outlier == FALSE),
+              aes(x = Treatment, y = delta2),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(MRI_lean_delta, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = delta2), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(MRI_lean_delta_summary, "Treatment"), 
+                aes(x = Treatment, ymin = Mean2 - SE2, ymax = Mean2 + SE2), 
+                color = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2,
+                stat = "identity") +
+  geom_hline(yintercept = 0) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  labs(y = "change in lean mass, start - end (grams)",
+       title = "MRI: lean mass change after treatments", 
+       subtitle = paste0(parametric_MRI_lean2$test_type, ", p = ", round(parametric_MRI_lean2$p_val, 5))) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  coord_cartesian(ylim = c(-5, 8)) +
+  minimal_theme +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))
+
+# Check if the p-value is below 0.05
+if (round(parametric_MRI_lean2$p_val, 5) < 0.05) {
+  MRI_delta_lean_barplot2 <- MRI_delta_lean_barplot2 + 
+  geom_signif(comparisons = comparisons_MRI_lean2,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.05,
+              annotations = paste0(pairwise_MRI_lean2$p.adj.signif))
+} 
+
+```
+
+```{r necropsy, echo=FALSE}
+# Define the path to your Excel file
+necropsy_file <- "/Users/christoffermerrild/OneDrive - University of Copenhagen/Speciale/CM4/CM4-Necropsy.xlsx"
+
+# Read the Excel file into a data frame with column names
+necropsy_data <- read_excel(necropsy_file, col_names = TRUE)
+
+# Filter out rows with IDs in the 'flags' vector
+necropsy_data <- necropsy_data %>%
+  filter(!(ID %in% flags)) %>%
+  filter(!(ID == "1083.5"))
+
+necropsy_data$liver <- as.numeric(necropsy_data$liver)
+necropsy_data$brain <- as.numeric(necropsy_data$brain)
+necropsy_data$heart <- as.numeric(necropsy_data$heart)
+necropsy_data$heart_brain <- as.numeric(necropsy_data$heart_brain)
+
+### this is liver ### 
+# Calculate the means and standard errors for each combination of Timepoint and Treatment
+summary_liver <- necropsy_data %>%
+  group_by(Treatment) %>%
+  summarize(Mean = mean(liver, na.rm = TRUE),
+            SE = sd(liver, na.rm = TRUE) / sqrt(length(liver)), .groups = "drop")
+
+# Adding outlier detection based on IQR
+liver_data <- necropsy_data %>%
+  group_by(Treatment) %>%
+  mutate(
+    IQR_value = IQR(liver),
+    Lower_Bound = quantile(liver, 0.25) - 1.5 * IQR_value,
+    Upper_Bound = quantile(liver, 0.75) + 1.5 * IQR_value,
+    Is_Outlier = liver > Upper_Bound | liver < Lower_Bound
+  ) %>%
+  ungroup()
+
+# Normality
+normality_liver <- normality_tests(liver_data, "liver")
+
+# Parametric ANOVA / Non-parametric ANOVA
+parametric_liver <- perform_anova(liver_data, "Treatment", "liver", parametric = normality_liver)
+
+# Making pairwise tests if results from parametric / non-parametric ANOVA is significant
+pairwise_liver <- pairwise_testing(liver_data, "liver", "Treatment", "bonferroni", parametric_liver)
+
+# Calling the comparisons for plotting
+comparisons_liver <- generate_comparisons_list(pairwise_liver)
+
+# Final BG barplot
+liver_barplot <- ggplot(data = relevel(liver_data, "Treatment"), aes(x = Treatment, y = liver, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(summary_liver, "Treatment"), mapping = aes(x = Treatment, y = Mean, fill = Treatment),
+           col = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(data = filter(liver_data, Is_Outlier == FALSE),
+              aes(x = Treatment, y = liver),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(liver_data, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = liver), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(summary_liver, "Treatment"), mapping = aes(x = Treatment, ymin = Mean - SE, ymax = Mean + SE), 
+                col = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2) +  
+  labs(y = "Liver weight (g)",
+       title = "Liver weights",
+       subtitle = paste0(parametric_liver$test_type, ", p = ", round(parametric_liver$p_val, 5))) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  coord_cartesian(ylim = c(0, 10)) +
+  minimal_theme +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))
+# Check if the p-value is below 0.05
+if (round(parametric_liver$p_val, 5) < 0.05) {
+  liver_barplot <- liver_barplot + 
+  geom_signif(comparisons = comparisons_liver,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.1,
+              annotations = paste0(pairwise_liver$p.adj.signif))
+} 
+
+### this is heart ### 
+# Calculate the means and standard errors for each combination of Timepoint and Treatment
+summary_heart <- necropsy_data %>%
+  group_by(Treatment) %>%
+  summarize(Mean = mean(heart, na.rm = TRUE),
+            SE = sd(heart, na.rm = TRUE) / sqrt(length(heart)), .groups = "drop")
+
+# Adding outlier detection based on IQR
+heart_data <- necropsy_data %>%
+  group_by(Treatment) %>%
+  mutate(
+    IQR_value = IQR(heart),
+    Lower_Bound = quantile(heart, 0.25) - 1.5 * IQR_value,
+    Upper_Bound = quantile(heart, 0.75) + 1.5 * IQR_value,
+    Is_Outlier = heart > Upper_Bound | heart < Lower_Bound
+  ) %>%
+  ungroup()
+
+# Normality
+normality_heart <- normality_tests(heart_data, "heart")
+
+# Parametric ANOVA / Non-parametric ANOVA
+parametric_heart <- perform_anova(heart_data, "Treatment", "heart", parametric = normality_heart)
+
+# Making pairwise tests if results from parametric / non-parametric ANOVA is significant
+pairwise_heart <- pairwise_testing(heart_data, "heart", "Treatment", "bonferroni", parametric_heart)
+
+# Calling the comparisons for plotting
+comparisons_heart <- generate_comparisons_list(pairwise_heart)
+
+# Final BG barplot
+heart_barplot <- ggplot(data = relevel(heart_data, "Treatment"), aes(x = Treatment, y = heart, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(summary_heart, "Treatment"), mapping = aes(x = Treatment, y = Mean, fill = Treatment),
+           col = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(data = filter(heart_data, Is_Outlier == FALSE),
+              aes(x = Treatment, y = heart),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(heart_data, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = heart), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(summary_heart, "Treatment"), mapping = aes(x = Treatment, ymin = Mean - SE, ymax = Mean + SE), 
+                col = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2) +  
+  labs(y = "Heart weight (g)",
+       title = "heart weights",
+       subtitle = paste0(parametric_heart$test_type, ", p = ", round(parametric_heart$p_val, 5))) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  coord_cartesian(ylim = c(0, .31)) +
+  minimal_theme +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))
+# Check if the p-value is below 0.05
+if (round(parametric_heart$p_val, 5) < 0.05) {
+  heart_barplot <- heart_barplot + 
+  geom_signif(comparisons = comparisons_heart,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.1,
+              annotations = paste0(pairwise_heart$p.adj.signif))
+} 
+
+### this is heart_brain ### 
+# Calculate the means and standard errors for each combination of Timepoint and Treatment
+summary_heart_brain <- necropsy_data %>%
+  group_by(Treatment) %>%
+  summarize(Mean = mean(heart_brain, na.rm = TRUE),
+            SE = sd(heart_brain, na.rm = TRUE) / sqrt(length(heart_brain)), .groups = "drop")
+
+# Adding outlier detection based on IQR
+heart_brain_data <- necropsy_data %>%
+  group_by(Treatment) %>%
+  mutate(
+    IQR_value = IQR(heart_brain),
+    Lower_Bound = quantile(heart_brain, 0.25) - 1.5 * IQR_value,
+    Upper_Bound = quantile(heart_brain, 0.75) + 1.5 * IQR_value,
+    Is_Outlier = heart_brain > Upper_Bound | heart_brain < Lower_Bound
+  ) %>%
+  ungroup()
+
+# Normality
+normality_heart_brain <- normality_tests(heart_brain_data, "heart_brain")
+
+# Parametric ANOVA / Non-parametric ANOVA
+parametric_heart_brain <- perform_anova(heart_brain_data, "Treatment", "heart_brain", parametric = normality_heart_brain)
+
+# Making pairwise tests if results from parametric / non-parametric ANOVA is significant
+pairwise_heart_brain <- pairwise_testing(heart_brain_data, "heart_brain", "Treatment", "bonferroni", parametric_heart_brain)
+
+# Calling the comparisons for plotting
+comparisons_heart_brain <- generate_comparisons_list(pairwise_heart_brain)
+
+# Final BG barplot
+heart_brain_barplot <- ggplot(data = relevel(heart_brain_data, "Treatment"), aes(x = Treatment, y = heart_brain, fill = Treatment)) +
+  geom_bar(inherit.aes = FALSE, data = relevel(summary_heart_brain, "Treatment"), mapping = aes(x = Treatment, y = Mean, fill = Treatment),
+           col = "black",
+           size = 0.5,
+           width = 0.5, 
+           position = position_dodge(width = 0.7), 
+           stat = "identity") + 
+  geom_jitter(data = filter(heart_brain_data, Is_Outlier == FALSE),
+              aes(x = Treatment, y = heart_brain),
+              position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+              color = "black",
+              shape = 21, 
+              stroke = 0.5,
+              size = 1.5, 
+              show.legend = FALSE) +
+  geom_point(data = filter(heart_brain_data, Is_Outlier == TRUE), 
+             aes(x = Treatment, y = heart_brain), 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.7),
+             color = "red",
+             size = 2,
+             stroke = 0.5,
+             shape = 21,
+             show.legend = FALSE) +
+  geom_errorbar(inherit.aes = FALSE, data = relevel(summary_heart_brain, "Treatment"), mapping = aes(x = Treatment, ymin = Mean - SE, ymax = Mean + SE), 
+                col = "black",
+                width = 0.2, 
+                position = position_dodge(width = 0.7), 
+                size = 0.2) +  
+  labs(y = "Heart/brain ratio",
+       title = "Ratio of heart/brain",
+       subtitle = paste0(parametric_heart_brain$test_type, ", p = ", round(parametric_heart_brain$p_val, 5))) +
+  scale_fill_manual(values = color_map) +
+  scale_color_manual(values = color_map) +
+  scale_y_continuous(expand = expansion(mult = 0)) + 
+  coord_cartesian(ylim = c(0, .7)) +
+  minimal_theme +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(size = 8))
+# Check if the p-value is below 0.05
+if (round(parametric_heart_brain$p_val, 5) < 0.05) {
+  heart_brain_barplot <- heart_brain_barplot + 
+  geom_signif(comparisons = comparisons_heart_brain,
+              tip_length = 0.025,
+              size = 0.25,
+              textsize = 2.5,
+              step_increase = 0.12,
+              annotations = paste0(pairwise_heart_brain$p.adj.signif))
+} 
+
+heart_barplot
+heart_brain_barplot
+liver_barplot
+
+```
+## The plots are the following
+
+```{r plots, echo=FALSE}
+# saving data as .png
+ggsave("CM4-JOP63_FI.png", FI_plot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_FI_total_barplot.png", FI_total_barplot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_BM.png", BM_plot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_BM_delta.png", BM_delta_plot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_BM_delta_total.png", BM_delta_total_barplot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_BM_total.png", BM_total_barplot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_BG.png", BG_plot, width = 6, height = 4, dpi = 300, bg = "white")
+
+FI_plot
+FI_total_barplot
+BM_plot
+BM_delta_plot
+BM_delta_total_barplot
+BM_total_barplot
+BG_plot
+
+ggsave("CM4-JOP63_AST.png", ast_plot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_ALT.png", alt_plot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_chol.png", chol_plot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_trig.png", trig_plot, width = 6, height = 4, dpi = 300, bg = "white")
+
+ast_plot
+alt_plot
+chol_plot
+trig_plot
+
+
+ggsave("CM4-JOP63_MRI_delta_lean.png", MRI_delta_lean_barplot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_MRI_delta_lean2.png", MRI_delta_lean_barplot2, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_MRI_lean.png", MRI_lean_barplot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_MRI_delta_fat.png", MRI_delta_fat_barplot, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_MRI_delta_fat2.png", MRI_delta_fat_barplot2, width = 6, height = 4, dpi = 300, bg = "white")
+ggsave("CM4-JOP63_MRI_fat.png", MRI_fat_barplot, width = 6, height = 4, dpi = 300, bg = "white")
+
+MRI_delta_fat_barplot
+MRI_delta_fat_barplot2
+MRI_fat_barplot
+MRI_delta_lean_barplot
+MRI_delta_lean_barplot2
+MRI_lean_barplot
+
+
+#svgs 
+ggsave("CM4-JOP63_FI.svg", FI_plot, width = 7, height = 4, device = "svg")
+ggsave("CM4-JOP63_FI_total_barplot.svg", FI_total_barplot, width = 5, height = 4, device = "svg")
+ggsave("CM4-JOP63_FI_cumulative.svg", FI_cumulative_plot, width = 7, height = 4, device = "svg")
+ggsave("CM4-JOP63_BM.svg", BM_plot, width = 7, height = 4, device = "svg")
+ggsave("CM4-JOP63_BM_delta.svg", BM_delta_plot, width = 7, height = 4, device = "svg")
+ggsave("CM4-JOP63_BM_delta_total.svg", BM_delta_total_barplot, width = 5, height = 4, device = "svg")
+ggsave("CM4-JOP63_BM_total.svg", BM_total_barplot, width = 5, height = 4, device = "svg")
+ggsave("CM4-JOP63_BG.svg", BG_plot, width = 5, height = 4, device = "svg")
+ggsave("CM4-JOP63_BG_change.svg", change_BG_barplot, width = 5, height = 4, device = "svg")
+
+ggsave("CM4-JOP63_MRI_delta_lean.svg", MRI_delta_lean_barplot, width = 5, height = 4, device = "svg")
+ggsave("CM4-JOP63_MRI_delta_lean2.svg", MRI_delta_lean_barplot2, width = 5, height = 4, device = "svg")
+ggsave("CM4-JOP63_MRI_lean.svg", MRI_lean_barplot, width = 6, height = 4, device = "svg")
+ggsave("CM4-JOP63_MRI_delta_fat.svg", MRI_delta_fat_barplot, width = 5, height = 4, device = "svg")
+ggsave("CM4-JOP63_MRI_delta_fat2.svg", MRI_delta_fat_barplot2, width = 5, height = 4, device = "svg")
+ggsave("CM4-JOP63_MRI_fat.svg", MRI_fat_barplot, width = 6, height = 4, device = "svg")
+
+ggsave("CM4-JOP63_heart.svg", heart_barplot, width = 5, height = 4, device = "svg")
+ggsave("CM4-JOP63_liver.svg", liver_barplot, width = 5, height = 4, device = "svg")
+ggsave("CM4-JOP63_heart_brain.svg", heart_brain_barplot, width = 5, height = 4, device = "svg")
+
+summary_BM %>% filter(Timepoint == 56)
+summary_delta_total_BM
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
